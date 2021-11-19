@@ -73,7 +73,8 @@ function AutomationBase.Get()
 
     --job files should override this 
     function AutomationBase:DoRender()
-        QueueManagerCore:DoRender()
+        self["QueueManager"]:DoRender()
+        --add a default editor
     end
 
 

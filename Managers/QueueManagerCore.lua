@@ -111,7 +111,6 @@ function QueueManagerCore.Get()
             local abilityTimerId = mmRecast:GetAbilityTimerId(i)
             local abilityTimer = mmRecast:GetAbilityTimer(i)
             local ability = resManager:GetAbilityByTimerId(abilityTimerId)
-
             if(ability and ability.Name[1] == entry["ActionName"])then
                 if(abilityTimer == 0)then
                     return true
@@ -168,9 +167,9 @@ function QueueManagerCore.Get()
     end
 
     local function QueuePushAbility(entry)
-        if(QueueManagerCore:AbilityReady(entry) and QueueManagerCore:QueueContainsEntry(entry) == false)then
+        --print(QueueManagerCore:AbilityReady({ActionName = "Entrust"}))
+        if(QueueManagerCore:AbilityReady(entry) == true and QueueManagerCore:QueueContainsEntry(entry) == false)then
             entry["Attempts"] = 0
-
             local playerObject = GetPlayerEntity()
             if(entry["SelfCast"])then
                 entry["TargetId"] = playerObject.ServerId

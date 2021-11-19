@@ -71,6 +71,7 @@ local CmdDictionary = {
     end,
     ["clearq"] = function()
         AshitaBP["AutomationManager"]["Manager"]:ClearQueue()
+        AshitaBP:AddonMsg("Clearing Queue!")
     end,
 }
 

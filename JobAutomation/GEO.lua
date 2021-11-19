@@ -4,27 +4,38 @@ local AutomationBase = require('JobAutomation\\AutomationBase')
 local BuffUtility = require('Utilities\\BuffUtility') 
 local ActionUtility = require('Utilities\\ActionUtility')
 local CureManagerCore = require('Managers\\CureManagerCore')
-local QueueManagerCore = require('Managers\\QueueManagerCore')
 
 local GeoComponent = {}
 setmetatable(GeoComponent, {__index = AutomationBase})
-
-local AutoTimer = os.clock()
-local QueueSpamTimer = os.clock()
-local QueueCommandTimer= os.clock()
 
 local buffs = require('ExtraRes\\buffs')
 local spells = require('ExtraRes\\spells')
 
 function GeoComponent.Get()
-    local IsActing = false
-    local TargetIndex = 0
-    local TargetId = 0
-    local InputDelay = 0
-    local GeoActionEnum = {}
 
-    local QueueManager = {}
-
+        --non geo bubble related spells/jas
+        local GeoActionEnum = {
+            ["Debuff"] = {
+                [1] = "Dia II"
+            },
+            ["Buff"] = {
+                ["Magic"] = {
+                    ["Self"] = {
+                    [1] = "Stoneskin",
+                   -- [2] = "Aquaveil",
+                    [2] = "Haste",
+                    },
+                    ["Other"] = {
+    
+                    },
+                },
+                ["Ability"] = {
+                    ["Self"] = {},
+                    ["Other"] = {},
+                }
+            },
+        }
+    
     --job settings
     local Settings = {
         ["Indi"] = "Indi-Fury",
@@ -32,29 +43,6 @@ function GeoComponent.Get()
         ["Entrust"] = {
             ["Target"] = "Uwu",
             ["Indi"] = "Indi-Refresh"
-        },
-    }
-
-    --non geo bubble related spells/jas
-    local GeoActionEnum = {
-        ["Debuff"] = {
-            [1] = "Dia II"
-        },
-        ["Buff"] = {
-            ["Magic"] = {
-                ["Self"] = {
-                [1] = "Stoneskin",
-               -- [2] = "Aquaveil",
-                [2] = "Haste",
-                },
-                ["Other"] = {
-
-                },
-            },
-            ["Ability"] = {
-                ["Self"] = {},
-                ["Other"] = {},
-            }
         },
     }
 
@@ -69,45 +57,6 @@ function GeoComponent.Get()
             geoBubbles:insert(v)
         end
     end
-
-    public setters
-    function GeoComponent:SetLastAttemptedSpell(spellName)
-        QueueManagerCore:SetLastAttemptedSpell(spellName)
-        print(("Attemping spell [%s]"):fmt(spellName))
-    end
-
-    function GeoComponent:SetLastAttemptedItem(itemName)
-        QueueManagerCore:SetLastAttemptedItem(itemName)
-        print(("Attempting item [%s]"):fmt(itemName))
-    end
-
-    function GeoComponent:SetLastAttemptedWeaponskill(wsName)
-        QueueManagerCore:SetLastAttemptedWeaponskill(wsName)
-        print(("Attempting WS [%s]"):fmt(wsName))
-    end
-
-    function GeoComponent:SetCompletedAction(completed)
-        QueueManagerCore:SetCompletedAction(completed)
-        print(("Completed last action [%s]"):fmt(completed))
-    end
-
-    function GeoComponent:SetIsActing(isActing)
-        IsActing = isActing -- leaving for testing, will be removed
-        QueueManagerCore:SetIsActing(isActing)
-    end
-
-    function GeoComponent:SetInputDelay(inputDelay)
-        InputDelay = inputDelay -- leaving for testing, will be removed
-        QueueManagerCore:SetInputDelay(inputDelay)
-    end
-
-    --function GeoComponent:SetTargetId(targetId)
-    --    TargetId = targetId
-    --end
-
-    --function GeoComponent:SetTargetIndex(targetIndex)
-    --    TargetIndex = targetIndex
-    --end
 
     local function GetBuff(name)
         for i,v in pairs(buffs) do
@@ -141,50 +90,89 @@ function GeoComponent.Get()
         end
     end
 
+    local function GetEntityByName(name)
+        for i = 0, 2303 do
+            local entity = GetEntity(i)
+            if(entity and entity.Name == name)then
+                return entity
+            end
+        end
+        return nil
+    end
+
     --debuff delay table
     local lastDebuffTimes = T{}
 
     function GeoComponent:Auto()
-        if(os.clock() - self["AutomationTimer"] > 0.9 and IsActing == false)then
+        if(os.clock() - self["AutomationTimer"] > 0.9 and self["Vars"]["IsActing"] == false)then
             --handle self indi buff
             if(BuffUtility:HasBuff(colureBuff.id) == false)then -- need to check for active bubble buff too and make sure its what we want
                 local indi = GetIndiSpell(Settings["Indi"])
+                local buff = GetBuff(Settings["Indi"])
                 local queueEntry = {}
                 queueEntry["ActionName"] = indi.en
                 queueEntry["TargetId"] = 0
                 queueEntry["ActionType"] = "Magic"
                 queueEntry["SelfCast"] = true
-                QueueManagerCore:Push(queueEntry)
+                if(buff and BuffUtility:HasBuff(buff.id) == false)then
+                    self["QueueManager"]:Push(queueEntry)
+                end
             end
 
             local playerObject = GetPlayerEntity()
             --handle geo buff
-            if(playerObject.PetTargetIndex == 0 and TargetIndex ~= 0)then
+            if(playerObject.PetTargetIndex == 0 and self["Vars"]["TargetIndex"] ~= 0)then
                 local geo = GetGeoSpell(Settings["Geo"])
                 local queueEntry = {}
                 queueEntry["ActionName"] = geo.en
-                queueEntry["TargetId"] = GetEntity(TargetIndex).ServerId 
+                queueEntry["TargetId"] = GetEntity(self["Vars"]["TargetIndex"]).ServerId 
                 queueEntry["ActionType"] = "Magic"
                 queueEntry["SelfCast"] = false
-                QueueManagerCore:Push(queueEntry)
+                self["QueueManager"]:Push(queueEntry)
             end
 
             --handle entrust buff
+            local entrust = GetBuff("Entrust")
+            local bubble = GetIndiSpell(Settings["Entrust"]["Indi"])
+            if(ActionUtility:AbilityReady({ActionName = "Entrust"}))then
+                if(BuffUtility:HasBuff(entrust.id) == false)then
+                    local queueEntry = {}
+                    local indi = GetIndiSpell(Settings["Entrust"]["Indi"])
+                    queueEntry["ActionName"] = "Entrust"
+                    queueEntry["ActionType"] = "Ability"
+                    queueEntry["TargetId"] = 0
+                    queueEntry["SelfCast"] = true
+                    self["QueueManager"]:Push(queueEntry)
+                end
+            end
+            if(BuffUtility:HasBuff(entrust.id) == true and bubble and BuffUtility:HasBuff(bubble.id) == false)then
+                print('here')
+                local queueEntry = {}
+                local indi = GetIndiSpell(Settings["Entrust"]["Indi"])
+                queueEntry["ActionName"] = indi.en
+                queueEntry["ActionType"] = "Magic"
+                queueEntry["SelfCast"] = false
+                local entrustTarget = GetEntityByName(Settings["Entrust"]["Target"])
+                if(entrustTarget)then
+                    queueEntry["TargetId"] = entrustTarget.ServerId
+                    self["QueueManager"]:Push(queueEntry)
+                end
+            end
 
             --handle debuffs
             for k,v in pairs(GeoActionEnum["Debuff"]) do
-                if(TargetIndex ~= 0)then
+                if(self["Vars"]["TargetIndex"] ~= 0)then
                     local spell = GetSpell(v)
                     local queueEntry = {}
                     local foundInDebuffTimers = false
                     queueEntry["ActionName"] = spell.en
-                    queueEntry["TargetId"] = GetEntity(TargetIndex).ServerId
+                    queueEntry["TargetId"] = GetEntity(self["Vars"]["TargetIndex"]).ServerId
                     queueEntry["ActionType"] = "Magic"
                     queueEntry["SelfCast"] = false
 
                     for k,v in pairs(lastDebuffTimes) do
                         if((v["Name"]):contains(spell.en) and os.clock() - v["Time"] > 60)then
-                            QueueManagerCore:Push(queueEntry)
+                            self["QueueManager"]:Push(queueEntry)
                             local lastDebuffTimeEntry = {}
                             lastDebuffTimes[k]["Name"] = spell.en
                             lastDebuffTimes[k]["Time"] = os.clock()
@@ -194,7 +182,7 @@ function GeoComponent.Get()
                     end
                     
                     if(foundInDebuffTimers == false)then
-                        QueueManagerCore:Push(queueEntry)
+                        self["QueueManager"]:Push(queueEntry)
                         local lastDebuffTimeEntry = {}
                         lastDebuffTimeEntry["Name"] = spell.en
                         lastDebuffTimeEntry["Time"] = os.clock()
@@ -219,42 +207,41 @@ function GeoComponent.Get()
 
                     local queueEntry = {}
                     queueEntry["ActionName"] = spell.en
-                   -- print(spell.en)
                     queueEntry["SelfCast"] = true
                     queueEntry["ActionType"] = "Magic"
                     if(ActionUtility:SpellReady(queueEntry) == true)then
-                        QueueManagerCore:Push(queueEntry)
+                        self["QueueManager"]:Push(queueEntry)
                     end
                 end
             end
 
-            if(not IsActing)then
+            --handle persistent party member buffs (this needs a whole system to track)
+
+            --handle cures
+            if(self["Vars"]["IsActing"] == false)then
                 --make preferred mp a setting
                 if(AshitaCore:GetMemoryManager():GetParty():GetMemberMPPercent(0) > 50)then
                     local bestCure = CureManagerCore:GetBestCure("GEO")
                     if(bestCure)then
                         if(ActionUtility:SpellReady(bestCure))then
-                            QueueManagerCore:Push(bestCure)
+                            self["QueueManager"]:Push(bestCure)
                         end
                     end
                 end
             end
-            --handle cures
+
+            --handle status effect removal
+
+            --handle item usage
+            
             self["AutomationTimer"] = os.clock()
         end
 
     end
 
-    function GeoComponent:ProcessQueue()
-        QueueManagerCore:ProcessQueue()
-    end
-
-    function GeoComponent:ClearQueue()
-        QueueManagerCore:ResetQueue()
-    end
-
+    --override for job window
     function GeoComponent:DoRender()
-        QueueManagerCore:DoRender()
+        self["QueueManager"]:DoRender()
         local playerObject = GetPlayerEntity()
         local shouldShow = playerObject.PetTargetIndex ~= 0
         local petObject = nil
