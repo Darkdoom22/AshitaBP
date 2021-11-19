@@ -1,3 +1,4 @@
+local imgui = require('imgui')
 local AutomationBase = {}
 AutomationBase.__index = AutomationBase
 
@@ -25,6 +26,15 @@ function AutomationBase.Get()
         ["AutoCure"] = true,
         ["AutoStatusRemove"] = true,
         ["AutoEnmity"] = true,
+    }
+
+    --imgui formatted
+    local editorVars = {
+        ["AutoBuff"] = {true},
+        ["AutoAbility"] = {true},
+        ["AutoCure"] = {true},
+        ["AutoStatusRemove"] = {true},
+        ["AutoEnmity"] = {true},
     }
 
     --shared setters
@@ -74,7 +84,23 @@ function AutomationBase.Get()
     --job files should override this 
     function AutomationBase:DoRender()
         self["QueueManager"]:DoRender()
-        --add a default editor
+    end
+
+    --default editor
+    --need to add saving/loading settings
+    function AutomationBase:RenderEditor(show)
+        imgui.SetNextWindowSize({200, 200}, ImGuiCond_Always)
+        imgui.SetNextWindowPos({300, 700})
+        if(imgui.Begin("BaseEditor", show, ImGuiWindowFlags_NoResize))then
+            imgui.Checkbox("Auto Buff", editorVars["AutoBuff"])
+            imgui.Checkbox("Auto Ability", editorVars["AutoAbility"])
+            imgui.Checkbox("Auto Cure", editorVars["AutoCure"])
+            imgui.Checkbox("Auto Status Removal", editorVars["AutoStatusRemove"])
+            imgui.Checkbox("Auto Enmity", editorVars["AutoEnmity"])
+            for k,v in pairs(editorVars) do
+                AutomationBase["Settings"][k] = v[1]
+            end 
+        end
     end
 
 

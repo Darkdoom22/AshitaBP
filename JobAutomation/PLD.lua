@@ -163,7 +163,6 @@ function PldComponent.Get()
         local playerObject = AshitaCore:GetMemoryManager():GetPlayer()
         local buffs = playerObject:GetBuffs()
 
-        --queue commands to game
         if(os.clock() - self["AutomationTimer"] > 0.7)then
 
             if(self["Vars"]["IsActing"] == false)then
@@ -222,22 +221,6 @@ function PldComponent.Get()
             self["AutomationTimer"] = os.clock()
 
         end
-
-    end
-
-    function PldComponent:GetQueueAsStr()  
-        str = ""
-        for i,v in ipairs(PldCommandQueue["Queue"]) do
-            str = str..v["ActionType"].." Act: "..v["ActionName"].." Tgt: "..v["Target"].." Atmpt: "..v["Attempts"].."\n"
-        end
-        return str
-    end
-
-    function PldComponent:GetQueue()
-        return PldCommandQueue["Queue"]
-    end
-
-    function PldComponent:RenderSettingsWindow()
 
     end
 
