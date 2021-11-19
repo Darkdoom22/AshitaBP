@@ -132,7 +132,8 @@ function CureManagerCore.Get()
         return math.floor(current * (100/percent))
     end
 
-    local function GetBestCure(allowedTable, amount)
+    --need to figure out how I want to handle curaga logic still
+    local function GetBestCure(allowedTable, amount, agaAvailable)
         for k,v in pairs(allowedTable) do
             if(v["MinHeal"] >= amount)then
                -- print(v["MinHeal"].." "..amount)
@@ -141,10 +142,11 @@ function CureManagerCore.Get()
         end
     end
 
-    function CheckBestCurePLD()
+    local function CheckBestCurePLD()
         local preferTier = 3
         local playerObject = GetPlayerEntity()
         local allowedCures = PerJobCuresAllowed["PLD"]
+        local curagaAvailable = playerObject:GetSubJob() == 3--WHM
         local party = AshitaCore:GetMemoryManager():GetParty();
         local zone = party:GetMemberZone(0)
         local highestMissingHp = 0
@@ -165,11 +167,42 @@ function CureManagerCore.Get()
             end
         end
 
-        local bestCure = GetBestCure(allowedCures, highestMissingHp)
+        local bestCure = GetBestCure(allowedCures, highestMissingHp, curagaAvailable)
         if(bestCure and bestCure["Tier"] >= preferTier and highestMissingId ~= 0)then
-          --  print(bestCure["ActionName"])
             bestCure["TargetId"] = highestMissingId
-           -- print('returning cure')
+            return bestCure
+        end
+
+    end
+
+    local function CheckBestCureGEO()
+        local preferTier = 3
+        local playerObject = GetPlayerEntity()
+        local allowedCures = PerJobCuresAllowed["PLD"]
+        local party = AshitaCore:GetMemoryManager():GetParty()
+        local zone = party:GetMemberZone(0)
+        local curagaAvailable = party:GetMemberSubJob(0) == 3--WHM
+        local highestMissingHp = 0
+        local highestMissingId = 0
+        local memberHp = 0
+        local targetId = 0
+        local memberMax = 0
+
+        for i = 1, 6 do
+            if(party:GetMemberIsActive(i - 1) == 1)then
+                memberHp = party:GetMemberHP(i - 1)
+                targetId = party:GetMemberServerId(i - 1)
+                memberMax = CalculateMaxHP(memberHp, party:GetMemberHPPercent(i - 1))
+                if(memberMax-memberHp > highestMissingHp and targetId ~= 0)then
+                    highestMissingHp = memberMax-memberHp
+                    highestMissingId = targetId
+                end
+            end
+        end
+
+        local bestCure = GetBestCure(allowedCures, highestMissingHp, curagaAvailable)
+        if(bestCure and bestCure["Tier"] >= preferTier and highestMissingId ~= 0)then
+            bestCure["TargetId"] = highestMissingId
             return bestCure
         end
 
@@ -177,6 +210,7 @@ function CureManagerCore.Get()
 
     CureManagerCore["JobSpecificCureLogicTable"] = {
         ["PLD"] = CheckBestCurePLD,
+        ["GEO"] = CheckBestCureGEO,
     }
 
     function CureManagerCore:GetBestCure(job)

@@ -47,8 +47,8 @@ function QueueManagerCore.Get()
     end
 
     function QueueManagerCore:QueueContainsEntry(entry)
-        for k,v in pairs(self["Queue"]) do
-            if(v["ActionName"] == entry["ActionName"] and v["TargetId"] == entry["TargetId"])then
+        for i,v in ipairs(self["Queue"]) do 
+            if(v["ActionName"] == entry["ActionName"])then
                 return true
             end
         end
@@ -66,7 +66,7 @@ function QueueManagerCore.Get()
 
     function QueueManagerCore:AddOrUpgradeCure(entry)
         local upgradedCure = false
-        if(self:DoesQueueHaveCure())then
+        if(self:DoesQueueHaveCure() == true)then
             for k,v in pairs(self["Queue"]) do
                 if(v["Tier"] and v["Tier"] < entry["Tier"])then
                     self["Queue"][k] = entry
@@ -74,7 +74,7 @@ function QueueManagerCore.Get()
                 end
             end
         elseif(not upgradedCure)then
-            if(not self:QueueContainsEntry(entry))then
+            if(self:QueueContainsEntry(entry) == false)then
                 self["Queue"]:insert(1, entry)
             end
         end
@@ -125,7 +125,7 @@ function QueueManagerCore.Get()
         local playerObject = AshitaCore:GetMemoryManager():GetPlayer()
         local buffs = playerObject:GetBuffs()
         for k,v in pairs(buffs) do
-            if(v == id)then
+            if(v.id == id)then
                 return true
             end
         end
@@ -142,7 +142,7 @@ function QueueManagerCore.Get()
         -- SelfCast
 
     local function QueuePushMagic(entry)
-        if(QueueManagerCore:SpellReady(entry) and not QueueManagerCore:QueueContainsEntry(entry))then
+        if(QueueManagerCore:SpellReady(entry) and QueueManagerCore:QueueContainsEntry(entry) == false)then
             --prep our entry fields
             entry["Attempts"] = 0
 
@@ -168,7 +168,7 @@ function QueueManagerCore.Get()
     end
 
     local function QueuePushAbility(entry)
-        if(QueueManagerCore:AbilityReady(entry) and not QueueManagerCore:QueueContainsEntry(entry))then
+        if(QueueManagerCore:AbilityReady(entry) and QueueManagerCore:QueueContainsEntry(entry) == false)then
             entry["Attempts"] = 0
 
             local playerObject = GetPlayerEntity()

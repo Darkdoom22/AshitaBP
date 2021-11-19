@@ -1,8 +1,8 @@
 require('common')
 local BuffUtility = {}
-
+--local buffs = require('ExtraRes\\buffs')
 function BuffUtility.Get()
-
+    
     function BuffUtility:HasBuff(id)
         local playerObject = AshitaCore:GetMemoryManager():GetPlayer()
         local buffs = playerObject:GetBuffs()

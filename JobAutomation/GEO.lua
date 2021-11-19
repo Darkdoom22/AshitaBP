@@ -1,10 +1,14 @@
 require('common')
 local imgui = require('imgui')
+local AutomationBase = require('JobAutomation\\AutomationBase')
 local BuffUtility = require('Utilities\\BuffUtility') 
 local ActionUtility = require('Utilities\\ActionUtility')
 local CureManagerCore = require('Managers\\CureManagerCore')
 local QueueManagerCore = require('Managers\\QueueManagerCore')
+
 local GeoComponent = {}
+setmetatable(GeoComponent, {__index = AutomationBase})
+
 local AutoTimer = os.clock()
 local QueueSpamTimer = os.clock()
 local QueueCommandTimer= os.clock()
@@ -66,7 +70,7 @@ function GeoComponent.Get()
         end
     end
 
-    --public setters
+    public setters
     function GeoComponent:SetLastAttemptedSpell(spellName)
         QueueManagerCore:SetLastAttemptedSpell(spellName)
         print(("Attemping spell [%s]"):fmt(spellName))
@@ -97,16 +101,13 @@ function GeoComponent.Get()
         QueueManagerCore:SetInputDelay(inputDelay)
     end
 
-    function GeoComponent:SetTargetId(targetId)
-        TargetId = targetId
-    end
+    --function GeoComponent:SetTargetId(targetId)
+    --    TargetId = targetId
+    --end
 
-    function GeoComponent:SetTargetIndex(targetIndex)
-        TargetIndex = targetIndex
-    end
-
-    function GeoComponent:SetSettings(settings)
-    end
+    --function GeoComponent:SetTargetIndex(targetIndex)
+    --    TargetIndex = targetIndex
+    --end
 
     local function GetBuff(name)
         for i,v in pairs(buffs) do
@@ -144,9 +145,9 @@ function GeoComponent.Get()
     local lastDebuffTimes = T{}
 
     function GeoComponent:Auto()
-        if(os.clock() - AutoTimer > 0.7 and IsActing == false)then
+        if(os.clock() - self["AutomationTimer"] > 0.9 and IsActing == false)then
             --handle self indi buff
-            if(not BuffUtility:HasBuff(colureBuff.id))then
+            if(BuffUtility:HasBuff(colureBuff.id) == false)then -- need to check for active bubble buff too and make sure its what we want
                 local indi = GetIndiSpell(Settings["Indi"])
                 local queueEntry = {}
                 queueEntry["ActionName"] = indi.en
@@ -206,27 +207,40 @@ function GeoComponent.Get()
             --handle self buffs
             for k,v in pairs(GeoActionEnum["Buff"]["Magic"]["Self"]) do
                 local buff = GetBuff(v)
-                if(not BuffUtility:HasBuff(buff.id))then
+                local buffId = 0
+                --several haste ids, figure out a better way to handle
+                if(buff.en == "Haste")then
+                    buffId = 33
+                else
+                    buffId = buff.id
+                end
+                if(BuffUtility:HasBuff(buffId) == false)then
                     local spell = GetSpell(v)
-                    local buffId = 0
+
                     local queueEntry = {}
                     queueEntry["ActionName"] = spell.en
-                    --two haste ids, figure out a better way to handle
-                    if(buff.en == "Haste")then
-                        buffId = 33
-                    else
-                        buffId = buff.id
-                    end
-                    
+                   -- print(spell.en)
                     queueEntry["SelfCast"] = true
                     queueEntry["ActionType"] = "Magic"
-                    if(ActionUtility:SpellReady(queueEntry) and not BuffUtility:HasBuff(buffId))then
+                    if(ActionUtility:SpellReady(queueEntry) == true)then
                         QueueManagerCore:Push(queueEntry)
                     end
                 end
             end
+
+            if(not IsActing)then
+                --make preferred mp a setting
+                if(AshitaCore:GetMemoryManager():GetParty():GetMemberMPPercent(0) > 50)then
+                    local bestCure = CureManagerCore:GetBestCure("GEO")
+                    if(bestCure)then
+                        if(ActionUtility:SpellReady(bestCure))then
+                            QueueManagerCore:Push(bestCure)
+                        end
+                    end
+                end
+            end
             --handle cures
-            AutoTimer = os.clock()
+            self["AutomationTimer"] = os.clock()
         end
 
     end

@@ -34,6 +34,7 @@ local AshitaBP = {
     },
     ["CommandManager"] = {
         ["HandleCommand"] = function(args)
+
         end,
     },
     ["QueueManager"] = {
@@ -48,7 +49,7 @@ local Settings = {
     },
     ["FollowChar"] = "Uwu",
     ["Controllers"] = T{
-        "Uwu", "Mierin", "Mingway", "Sombermabari", "Uwu"
+        "Uwu", "Mierin", "Mingway", "Sombermabari", 
     },
     ["AlwaysShowQueueWindow"] = true,
     ["AutomateJob"] = false,
@@ -67,6 +68,9 @@ local CmdDictionary = {
     ["auto"] = function()
         Settings["AutomateJob"] = not Settings["AutomateJob"]
         AshitaBP:AddonMsg(("Job Automation set to %s"):fmt(Settings["AutomateJob"]))
+    end,
+    ["clearq"] = function()
+        AshitaBP["AutomationManager"]["Manager"]:ClearQueue()
     end,
 }
 
@@ -91,6 +95,7 @@ ashita.events.register('command', 'command_cb', function(e)
     --handle
     if(#args == 2 and CmdDictionary[args[2]])then
         AshitaBP:AddonMsg("Valid Command received, doing thing")
+        --change to manager for consistency 
         CmdDictionary[args[2]]()
     end
 
@@ -305,6 +310,7 @@ ashita.events.register('d3d_present', 'present_cb', function ()
     if(Settings["AutomateJob"])then
         if(os.clock() - FileCheckTimer > Settings["CheckFileDelay"])then
             AshitaBP["IpcManager"]:CheckChanges()
+            FileCheckTimer = os.clock()
         end
         AshitaBP["AutomationManager"]["Manager"]:Auto()
         AshitaBP["AutomationManager"]["Manager"]:DoRender()
