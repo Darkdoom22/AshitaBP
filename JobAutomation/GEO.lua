@@ -105,6 +105,8 @@ function GeoComponent.Get()
 
     function GeoComponent:Auto()
         if(os.clock() - self["AutomationTimer"] > 0.9 and self["Vars"]["IsActing"] == false)then
+            local playerObject = GetPlayerEntity()
+            
             --handle self indi buff
             if(BuffUtility:HasBuff(colureBuff.id) == false)then -- need to check for active bubble buff too and make sure its what we want
                 local indi = GetIndiSpell(Settings["Indi"])
@@ -114,12 +116,12 @@ function GeoComponent.Get()
                 queueEntry["TargetId"] = 0
                 queueEntry["ActionType"] = "Magic"
                 queueEntry["SelfCast"] = true
-                if(buff and BuffUtility:HasBuff(buff.id) == false)then
+                if(buff and BuffUtility:HasBuff(buff.id) == false and playerObject:HasSpell(indi.id))then
                     self["QueueManager"]:Push(queueEntry)
                 end
             end
 
-            local playerObject = GetPlayerEntity()
+
             --handle geo buff
             if(playerObject.PetTargetIndex == 0 and self["Vars"]["TargetIndex"] ~= 0)then
                 local geo = GetGeoSpell(Settings["Geo"])
@@ -128,7 +130,9 @@ function GeoComponent.Get()
                 queueEntry["TargetId"] = GetEntity(self["Vars"]["TargetIndex"]).ServerId 
                 queueEntry["ActionType"] = "Magic"
                 queueEntry["SelfCast"] = false
-                self["QueueManager"]:Push(queueEntry)
+                if(playerObject:HasSpell(geo.id))then
+                    self["QueueManager"]:Push(queueEntry)
+                end
             end
 
             --handle entrust buff
@@ -142,7 +146,9 @@ function GeoComponent.Get()
                     queueEntry["ActionType"] = "Ability"
                     queueEntry["TargetId"] = 0
                     queueEntry["SelfCast"] = true
-                    self["QueueManager"]:Push(queueEntry)
+                    if(playerObject:HasAbility(entrust.id))then
+                        self["QueueManager"]:Push(queueEntry)
+                    end
                 end
             end
             if(BuffUtility:HasBuff(entrust.id) == true and bubble and BuffUtility:HasBuff(bubble.id) == false)then
@@ -153,7 +159,7 @@ function GeoComponent.Get()
                 queueEntry["ActionType"] = "Magic"
                 queueEntry["SelfCast"] = false
                 local entrustTarget = GetEntityByName(Settings["Entrust"]["Target"])
-                if(entrustTarget)then
+                if(entrustTarget and playerObject:HasSpell(indi.id))then
                     queueEntry["TargetId"] = entrustTarget.ServerId
                     self["QueueManager"]:Push(queueEntry)
                 end
@@ -171,7 +177,7 @@ function GeoComponent.Get()
                     queueEntry["SelfCast"] = false
 
                     for k,v in pairs(lastDebuffTimes) do
-                        if((v["Name"]):contains(spell.en) and os.clock() - v["Time"] > 60)then
+                        if((v["Name"]):contains(spell.en) and os.clock() - v["Time"] > 60 and playerObject:HasSpell(spell.id))then
                             self["QueueManager"]:Push(queueEntry)
                             local lastDebuffTimeEntry = {}
                             lastDebuffTimes[k]["Name"] = spell.en
@@ -181,7 +187,7 @@ function GeoComponent.Get()
                         end
                     end
                     
-                    if(foundInDebuffTimers == false)then
+                    if(foundInDebuffTimers == false and playerObject:HasSpell(spell.id))then
                         self["QueueManager"]:Push(queueEntry)
                         local lastDebuffTimeEntry = {}
                         lastDebuffTimeEntry["Name"] = spell.en
@@ -209,7 +215,7 @@ function GeoComponent.Get()
                     queueEntry["ActionName"] = spell.en
                     queueEntry["SelfCast"] = true
                     queueEntry["ActionType"] = "Magic"
-                    if(ActionUtility:SpellReady(queueEntry) == true)then
+                    if(ActionUtility:SpellReady(queueEntry) == true and playerObject:HasSpell(spell.id))then
                         self["QueueManager"]:Push(queueEntry)
                     end
                 end

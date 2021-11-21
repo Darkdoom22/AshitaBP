@@ -171,7 +171,7 @@ function PldComponent.Get()
                 if(AshitaCore:GetMemoryManager():GetParty():GetMemberMPPercent(0) > 50)then
                     local bestCure = CureManagerCore:GetBestCure("PLD")
                     if(bestCure)then
-                        if(ActionUtility:SpellReady(bestCure))then
+                        if(ActionUtility:SpellReady(bestCure) and playerObject:HasSpell(bestCure["ActionId"]))then
                            self["QueueManager"]:Push(bestCure) 
                         end
                     end
@@ -181,12 +181,12 @@ function PldComponent.Get()
                 for k,v in pairs(PldActionEnum["Ability"]) do
                     if(ActionUtility:AbilityReady(v))then
                         if(v["SelfCast"])then
-                            if(BuffUtility:HasBuff(v["BuffId"]) == false)then
+                            if(BuffUtility:HasBuff(v["BuffId"]) == false and playerObject:HasAbility(v["ActionId"]))then
                                 self["QueueManager"]:Push(v)
                             end
                         else        
                             local target = GetEntity(self["Vars"]["TargetIndex"])
-                            if(target and target.HPPercent > 0 and target.WarpPointer ~= 0)then
+                            if(target and target.HPPercent > 0 and target.WarpPointer ~= 0 and playerObject:HasAbility(v["ActionId"]))then
                                 v["TargetId"] = target.ServerId
                                 self["QueueManager"]:Push(v)
                             end
@@ -197,7 +197,7 @@ function PldComponent.Get()
                 ---handle buffs
                 for k,v in pairs(PldActionEnum["Buff"]) do
                     if(ActionUtility:SpellReady(v))then
-                        if(BuffUtility:HasBuff(v["BuffId"]) == false)then
+                        if(BuffUtility:HasBuff(v["BuffId"]) == false and playerObject:HasSpell(v["ActionId"]))then
                             PldActionEnum["Buff"][k]["ActionType"] = "Magic" 
                             self["QueueManager"]:Push(v)
                         end
@@ -208,7 +208,7 @@ function PldComponent.Get()
                 for k,v in pairs(PldActionEnum["Enmity"]) do
                     if(ActionUtility:SpellReady(v))then
                         local target = GetEntity(self["Vars"]["TargetIndex"])   
-                        if(target and target.HPPercent > 0 and target.WarpPointer ~= 0)then
+                        if(target and target.HPPercent > 0 and target.WarpPointer ~= 0 and playerObject:HasSpell(v["ActionId"]))then
                            -- PldCommandQueue:Push(v, true, false, false, target.ServerId)
                            v["TargetId"] = target.ServerId
                            self["QueueManager"]:Push(v)

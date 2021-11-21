@@ -10,6 +10,7 @@ local WeaponSkillsRes = require('ExtraRes\\weapon_skills')
 local JobManagerCore = require('Managers\\JobManagerCore')
 local IpcManagerCore = require('Managers\\IpcManagerCore')
 local TownExclusions = require('Misc\\TownZoneExclusions')
+local StatusRemovalManagerCore = require('Managers\\StatusRemovalManagerCore')
 
 local AshitaBP = {
     ["ActionManager"] = {
@@ -37,10 +38,8 @@ local AshitaBP = {
 
         end,
     },
-    ["QueueManager"] = {
-
-    },
     ["IpcManager"] = IpcManagerCore,
+    ["StatusManager"] = StatusRemovalManagerCore,
 }
 
 local Settings = {
@@ -78,6 +77,7 @@ local CmdDictionary = {
 --party commands
 local PCmdDictionary = {
     ["follow"] = function()
+        AshitaBP:AddonMsg("Following follow char..")
         AshitaCore:GetChatManager():QueueCommand(1, ('/follow %s'):fmt(Settings["FollowChar"]));
     end, 
 }
@@ -106,18 +106,6 @@ ashita.events.register('command', 'command_cb', function(e)
 end)
 
 ashita.events.register('text_in', 'text_in_cb', function(e)
-end)
-
-ashita.events.register('packet_in', 'packet_in_cb', function(e)
-    if(e.id == 0x0017)then
-        local mode = struct.unpack('h', e.data, 0x04 + 0x01)
-        local senderName = struct.unpack('s', e.data, 0x08 + 0x01)
-        local msg = struct.unpack('s', e.data, 0x17 + 0x01)
-        if(mode == 4 and Settings["Controllers"]:contains(senderName))then
-            AshitaBP:AddonMsg("Command from "..senderName.." mode "..mode.." msg "..msg)
-            AshitaBP["PartyCommandManager"]["HandleCommand"](msg)
-        end
-    end
 end)
 
 --action specific enums, move out later
@@ -154,7 +142,17 @@ ashita.events.register('packet_out', 'packet_out_cb', function(e)
 end)
 
 ashita.events.register('packet_in', 'packet_in_cb', function(e)
-    if(e.id == 0x028)then
+    if(e.id == 0x0017)then
+        local mode = struct.unpack('h', e.data, 0x04 + 0x01)
+        local senderName = struct.unpack('s', e.data, 0x08 + 0x01)
+        local msg = struct.unpack('s', e.data, 0x17 + 0x01)
+        if(mode == 4 and Settings["Controllers"]:contains(senderName))then
+            AshitaBP:AddonMsg("Command from "..senderName.." mode "..mode.." msg "..msg)
+            AshitaBP["PartyCommandManager"]["HandleCommand"](msg)
+        end
+    elseif(e.id == 0x0076)then
+        AshitaBP["StatusManager"]:ParsePartyBuffs(e.data)
+    elseif(e.id == 0x028)then
         local actor = struct.unpack('i', e.data, 0x05 + 0x01)
         local category = ashita.bits.unpack_le(e.data:totable(), 0x0A, 0x02, 0x4)
         local param = ashita.bits.unpack_be(e.data:totable(), 0xA, 0x6, 0x10)
@@ -256,8 +254,6 @@ function JaZero:Restore()
     ashita.memory.write_uint32(xiMain+self["Offsets"]["FunctionTwo"], self["Original"]["PatchThree"])
 end
 
-
-
 ashita.events.register('load', 'load_cb', function()
     AshitaBP:AddonMsg("Ashita BP Loaded!");
     AshitaBP:AddonMsg("Checking job..");
@@ -271,9 +267,7 @@ ashita.events.register('load', 'load_cb', function()
         JaZero:Apply()
     end
 
-    --AshitaBP:AddonMsg("Test mapping file..")
     IpcManagerCore:CreateMappedFile()
-
 end);
 
 ashita.events.register('unload', 'unload_cb', function()
@@ -307,7 +301,6 @@ ashita.events.register('d3d_present', 'present_cb', function ()
 
     local pObj2 = AshitaCore:GetMemoryManager():GetPlayer()
     
-    --print(TownExclusions[GetPlayerEntity().ZoneId])
     if(Settings["AutomateJob"])then
         if(os.clock() - FileCheckTimer > Settings["CheckFileDelay"])then
             AshitaBP["IpcManager"]:CheckChanges()

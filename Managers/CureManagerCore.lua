@@ -146,7 +146,7 @@ function CureManagerCore.Get()
         local preferTier = 3
         local playerObject = GetPlayerEntity()
         local allowedCures = PerJobCuresAllowed["PLD"]
-        local party = AshitaCore:GetMemoryManager():GetParty();
+        local party = AshitaCore:GetMemoryManager():GetParty()
         local curagaAvailable = party:GetMemberSubJob(0) == 3--WHM
         local zone = party:GetMemberZone(0)
         local highestMissingHp = 0
