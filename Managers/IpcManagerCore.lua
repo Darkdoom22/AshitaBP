@@ -76,10 +76,6 @@ IpcManagerCore["MappedFile"]["MemoryHandle"] = nil
 IpcManagerCore["MappedFile"]["MappedView"] = nil
 IpcManagerCore["MappedFile"]["DesiredSize"] = 8
 
---ipc struct
---0x0:0x3 - TargetId
---0x4:0x7- TargetIndex 
-
 function IpcManagerCore.Get()
 
     local ipcStruct = {
